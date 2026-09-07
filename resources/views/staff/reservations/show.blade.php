@@ -25,51 +25,99 @@
 
         <div class="mt-6 lg:grid lg:grid-cols-3 lg:gap-6">
             <div class="lg:col-span-2 space-y-6">
-                <x-card title="Actions">
-                    <div class="flex flex-wrap gap-2">
-                        @can('checkIn', $reservation)
-                            <form method="POST" action="{{ route('staff.reservations.check-in', $reservation) }}">
-                                @csrf
-                                <button class="rounded-md bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white hover:bg-slate-700">Check in</button>
-                            </form>
-                        @endcan
+                {{-- Hick's Law on the busiest staff screen.
 
-                        @can('checkOut', $reservation)
-                            <form method="POST" action="{{ route('staff.reservations.check-out', $reservation) }}">
-                                @csrf
-                                <button class="rounded-md border border-slate-300 px-3.5 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">Check out</button>
-                            </form>
-                        @endcan
+                     This previously showed eight actions of equal weight, so
+                     every visit cost a scan of all eight to find the one that
+                     applied. A booking's state almost always implies a single
+                     next step, so that one is promoted and the rest sit behind
+                     a disclosure.
 
-                        @can('markNoShow', $reservation)
-                            <form method="POST" action="{{ route('staff.reservations.no-show', $reservation) }}">
-                                @csrf
-                                <button class="rounded-md border border-rose-300 px-3.5 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">Mark no-show</button>
-                            </form>
-                        @endcan
-
-                        @can('requestExtension', $reservation)
-                            <form method="POST" action="{{ route('staff.extensions.store', $reservation) }}" class="flex gap-1">
-                                @csrf
-                                <select name="additional_hours" class="rounded-md border-slate-300 text-sm shadow-sm">
-                                    @foreach (range(1, 6) as $h)
-                                        <option value="{{ $h }}">+{{ $h }}h</option>
-                                    @endforeach
-                                </select>
-                                <button class="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">Extend</button>
-                            </form>
-                        @endcan
-                    </div>
-
-                    @if (! $reservation->status->occupiesRoom())
-                        <p class="mt-3 text-sm text-slate-500">
-                            This booking is {{ strtolower($reservation->status->label()) }} and no longer holds its room.
+                     Which action is promoted, and what is left over, is worked
+                     out by the controller -- it needs the policy gates, and a
+                     template is the wrong place for a branch. --}}
+                <x-card title="What happens next">
+                    @if ($primaryAction && $primaryAction['action'] === 'check-in')
+                        <form method="POST" action="{{ route('staff.reservations.check-in', $reservation) }}">
+                            @csrf
+                            <button class="w-full rounded-md bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-700">
+                                {{ $primaryAction['label'] }}
+                            </button>
+                        </form>
+                        <p class="mt-2 text-xs text-slate-500">
+                            Room {{ $reservation->room->number }} &middot; due {{ $reservation->starts_at->format('H:i') }}
                         </p>
+                    @elseif ($primaryAction && $primaryAction['action'] === 'check-out')
+                        <form method="POST" action="{{ route('staff.reservations.check-out', $reservation) }}">
+                            @csrf
+                            <button class="w-full rounded-md bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-700">
+                                {{ $primaryAction['label'] }}
+                            </button>
+                        </form>
+                        <p class="mt-2 text-xs text-slate-500">
+                            Due out {{ $reservation->ends_at->format('H:i') }} &middot; the room then goes to cleaning
+                        </p>
+                    @elseif ($primaryAction && $primaryAction['action'] === 'collect')
+                        <p class="text-sm text-slate-700">
+                            <span class="font-semibold text-amber-700"><x-money :cents="$reservation->balance_due_cents" /></span>
+                            still to pay. Record it below once taken.
+                        </p>
+                        <a href="#take-payment"
+                           class="mt-3 inline-flex w-full justify-center rounded-md bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-700">
+                            Take payment
+                        </a>
+                    @else
+                        <p class="text-sm text-slate-600">
+                            Nothing outstanding. This booking is {{ strtolower($reservation->status->label()) }}.
+                        </p>
+                    @endif
+
+                    {{-- Everything else, collapsed. The same actions as before,
+                         just no longer competing with the one that matters. --}}
+                    @if ($otherActions->isNotEmpty())
+                        <div class="mt-4 border-t border-slate-100 pt-4">
+                            <x-disclosure label="Other actions" :summary="$otherActions->count().' available'">
+                                <div class="flex flex-wrap gap-2">
+                                    @if ($otherActions->contains('check-in'))
+                                        <form method="POST" action="{{ route('staff.reservations.check-in', $reservation) }}">
+                                            @csrf
+                                            <button class="rounded-md border border-slate-300 px-3.5 py-2 text-sm font-semibold hover:bg-slate-50">Check in</button>
+                                        </form>
+                                    @endif
+
+                                    @if ($otherActions->contains('check-out'))
+                                        <form method="POST" action="{{ route('staff.reservations.check-out', $reservation) }}">
+                                            @csrf
+                                            <button class="rounded-md border border-slate-300 px-3.5 py-2 text-sm font-semibold hover:bg-slate-50">Check out</button>
+                                        </form>
+                                    @endif
+
+                                    @if ($otherActions->contains('no-show'))
+                                        <form method="POST" action="{{ route('staff.reservations.no-show', $reservation) }}">
+                                            @csrf
+                                            <button class="rounded-md border border-rose-300 px-3.5 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">Mark no-show</button>
+                                        </form>
+                                    @endif
+
+                                    @if ($otherActions->contains('extend'))
+                                        <form method="POST" action="{{ route('staff.extensions.store', $reservation) }}" class="flex gap-1">
+                                            @csrf
+                                            <select name="additional_hours" class="rounded-md border-slate-300 text-sm shadow-sm">
+                                                @foreach (range(1, 6) as $h)
+                                                    <option value="{{ $h }}">+{{ $h }}h</option>
+                                                @endforeach
+                                            </select>
+                                            <button class="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50">Extend</button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </x-disclosure>
+                        </div>
                     @endif
                 </x-card>
 
                 @can('recordPayment', $reservation)
-                    <x-card title="Record a payment taken at the desk"
+                    <x-card id="take-payment" class="scroll-mt-24" title="Record a payment taken at the desk"
                             subtitle="Attributed to you, {{ auth()->user()->name }}, and kept on the record.">
                         <form method="POST" action="{{ route('staff.payments.store', $reservation) }}" class="grid gap-3 sm:grid-cols-4">
                             @csrf

@@ -313,6 +313,128 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | About page
+    |--------------------------------------------------------------------------
+    |
+    | The page that answers "who am I dealing with". It matters more for a
+    | property selling four-hour stays than for a conventional hotel: the
+    | format carries a reputation, and the honest answer to it is the whole
+    | pitch.
+    |
+    */
+
+    'about' => [
+        'heading' => 'About :hotel',
+        'lead' => 'A small hotel in :district that sells rooms by the hour, cleans them between '
+            .'every guest, and does not pretend to be anything else.',
+
+        'story' => [
+            [
+                'heading' => 'Why we sell hours',
+                'paragraphs' => [
+                    'Hotels are priced around a night because that is how hotels have always been '
+                    .'priced, not because it is how people use rooms. A guest landing at 05:00 with a '
+                    .'meeting at 11:00 needs six hours. Charged for a night, they pay for eighteen '
+                    .'hours they will not be in the building.',
+
+                    'We built :hotel around the hours instead. Four packages — :packages — starting on '
+                    .'any hour of the clock. The price is for the package, not per hour, and it does '
+                    .'not change because you booked late or arrived at three in the morning.',
+                ],
+            ],
+            [
+                'heading' => 'What that changes',
+                'paragraphs' => [
+                    'Selling by the hour means a room can turn over three times before lunch, so the '
+                    .'cleaning has to be real. Every room is fully cleaned and re-linened after every '
+                    .'stay. We hold :buffer_minutes minutes back after each booking for it and refuse '
+                    .'to sell that time, which is why a room that looks free at a glance is sometimes '
+                    .'not offered.',
+
+                    'It also means half our guests are asleep at times most hotels are vacuuming the '
+                    .'corridor. The blackout curtains are real blackout, the windows are double-glazed, '
+                    .'and housekeeping does not knock. Quiet is the product.',
+                ],
+            ],
+            [
+                'heading' => 'How we handle the awkward parts',
+                'paragraphs' => [
+                    'Plans change, so cancelling more than :full_refund_hours hours ahead returns '
+                    .'everything, and the terms you booked under are the ones we honour even if we '
+                    .'change the policy afterwards. Flights slip, so there is a :grace_minutes-minute '
+                    .'grace period on arrival. Meetings overrun, so you can ask to extend — and if the '
+                    .'room is booked after you, we say no rather than move the next guest.',
+
+                    'None of that is generous, exactly. It is just what the format demands: if you sell '
+                    .'six-hour stays to people whose schedules move, the rules have to move with them.',
+                ],
+            ],
+        ],
+
+        'values' => [
+            [
+                'title' => 'One standard of room',
+                'body' => 'The difference between our room types is space and bedding. Wi-Fi, the desk, '
+                    .'the shower and the soundproofing are the same in all of them.',
+            ],
+            [
+                'title' => 'Prices that do not move',
+                'body' => 'The rate is the rate, whether you book a fortnight out or walk in at 2am. '
+                    .'We do not price by desperation.',
+            ],
+            [
+                'title' => 'Staffed all night',
+                'body' => 'Reception is a person, not a keypad, at every hour. A property selling 4am '
+                    .'arrivals cannot close its front desk at ten.',
+            ],
+            [
+                'title' => 'No surprises at the desk',
+                'body' => 'The total you see when booking includes taxes and fees. What is left to pay '
+                    .'on arrival is shown before you confirm.',
+            ],
+        ],
+
+        'closing' => 'If the format does not suit you, a conventional hotel will serve you better and '
+            .'we would rather say so. If it does, we are on :street and someone is awake.',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Contact page
+    |--------------------------------------------------------------------------
+    */
+
+    'contact' => [
+        'heading' => 'Contact us',
+        'lead' => 'Reception is staffed 24 hours. For anything about an existing booking, the phone is '
+            .'faster than this form.',
+
+        'channels' => [
+            [
+                'title' => 'Call the front desk',
+                'body' => 'Any hour, any day. The quickest way to change, extend or ask about a booking '
+                    .'you already hold.',
+            ],
+            [
+                'title' => 'Email us',
+                'body' => 'For enquiries that are not urgent. We answer within one working day.',
+            ],
+            [
+                'title' => 'Come in',
+                'body' => 'Walk-ins are welcome and we will book you into whatever is free. Booking '
+                    .'ahead is safer at night and at weekends.',
+            ],
+        ],
+
+        'form_note' => 'We use what you send only to answer you. If your message is about a booking, '
+            .'include the reference so we can find it.',
+
+        'success' => 'Thank you — your message has reached the front desk. We answer within one '
+            .'working day, and sooner during office hours.',
+    ],
+
     'closing_cta' => [
         'heading' => 'Find a room for the hours you need',
         'body' => 'Search live availability — no account required to look.',

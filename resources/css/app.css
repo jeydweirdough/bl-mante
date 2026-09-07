@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Alpine hides x-cloak elements until it has initialised. Without this rule
+ * they flash on screen for a moment before being hidden, which on the booking
+ * form means every extra's quantity box appears and then vanishes.
+ */
+[x-cloak] {
+    display: none !important;
+}
+
+/*
+ * The default disclosure triangle is removed in the components themselves via
+ * `marker:content-['']`, but Safari uses a separate pseudo-element that the
+ * Tailwind marker variant does not reach.
+ */
+summary::-webkit-details-marker {
+    display: none;
+}

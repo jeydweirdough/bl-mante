@@ -143,7 +143,55 @@ Face-to-face payments never touch the gateway. They are recorded directly and at
 to the staff member who took them; `PaymentService` requires the staff member, not just
 the form.
 
-### The public site and SEO
+### The public site
+
+Four pages, all reachable without an account:
+
+| Page | What it does |
+|---|---|
+| **Home** (`/`) | The property's website — ~1,800 words across an intro, differentiators, how the hourly model works, rooms, amenities, neighbourhood and a 12-question FAQ. |
+| **About** (`/about`) | Why the property sells hours rather than nights, how turnover works, and what happens when plans change. |
+| **Rooms** (`/rooms`) | The inventory *and* live availability — see below. |
+| **Contact** (`/contact`) | Phone, email, address, map link, and a working message form. |
+
+#### Rooms: availability, and when you *can* book
+
+The rooms page answers two questions at once — what the rooms are, and whether you can
+have one. Every room type shows one of four states for the requested window:
+
+- **Free** — how many rooms, with a booking link.
+- **Nearly gone** — two or fewer left, said plainly, because it is true.
+- **Full now, free later** — *"Fully booked at 12:00 · Next free today at 17:00 · that is 5
+  hours later"*, with buttons to jump to that window or book it directly.
+- **Full for the whole horizon** — a phone number and the contact form, rather than a shrug.
+
+The third state is the point. "Fully booked" on its own is a dead end that loses the
+visitor; the next free hour gives them something to click, and following the suggestion
+lands on a window that genuinely has a room.
+
+[`AvailabilityService::overview()`](app/Services/AvailabilityService.php) does this in a
+**fixed number of queries** — the whole lookahead of reservations is pulled once and the
+hour-by-hour scan happens in memory. Probing the database for each hour across a fortnight
+would be thousands of round trips to render one page; there is a test asserting the query
+count stays flat.
+
+Horizon is `HOTEL_ROOMS_LOOKAHEAD_DAYS` (default 14). A start time in the past is pulled
+forward to the next bookable hour rather than rejected, so a stale link still shows a
+useful page.
+
+#### Contact
+
+Messages are **stored, not emailed**. This system has no mail transport configured, and a
+form whose only copy goes to an SMTP server loses the message when that server is
+unreachable — a guest believing they have been in touch when they have not is worse than
+no form. The front desk reads them at `/staff/enquiries`, with an unread badge in the
+navigation, and a quoted booking reference is resolved to the actual booking.
+
+Two invisible anti-spam measures, neither of which asks a guest to prove anything: a
+honeypot field and a minimum time-on-page, plus rate limiting on the route. Deliberately
+not a CAPTCHA — it would tax every legitimate enquiry to stop spam these already handle.
+
+### SEO
 
 The homepage is the property's website, not just a booking widget: around 1,800 words of
 real copy across an intro, differentiators, how the hourly model works, rooms, amenities,
@@ -182,6 +230,49 @@ fails if anyone adds them.
 > `config/content.php` with verified facts. Invented specifics mislead guests, and a name,
 > address or phone that disagrees with the Google Business Profile is the most common reason
 > a hotel fails to rank locally.
+
+### Choice architecture (Hick's Law)
+
+Hick's Law says decision time rises with the number of options, so the interfaces are
+built to keep the number of *simultaneous* choices small — without removing capability.
+Four techniques, applied where the count was actually high:
+
+**1. Defaults that need no decision.** Every search arrives pre-filled with the next
+bookable hour and a sensible package, so a visitor who just wants to look can press one
+button. A start time in the past is pulled forward rather than rejected.
+
+**2. Presets for the common intents.** The time picker
+([`x-when-picker`](resources/views/components/when-picker.blade.php)) leads with *Next
+hour · Tonight · Tomorrow AM · Tomorrow PM*. Most people want one of those four, and for
+them a 24-option decision collapses to a 4-option one.
+
+**3. Categorisation when the list stays long.** The full hour dropdown is grouped into
+Overnight / Morning / Afternoon / Evening. The count is unchanged; the scan is not,
+because three quarters can be discarded at a glance. The admin menu's seven items are
+grouped the same way, under *What we sell* and *Running the place*.
+
+**4. Progressive disclosure for the genuinely optional.**
+[`x-disclosure`](resources/views/components/disclosure.blade.php) is a native `<details>`,
+so it works without JavaScript and is keyboard- and screen-reader-correct for free.
+
+What changed, concretely:
+
+| Screen | Before | After |
+|---|---|---|
+| Booking search | 6 questions at once (date, 1-of-24 hours, package, adults, children, room type) | 2 visible — when, how long. Guests and room type collapsed, with their values shown in the summary line. |
+| Booking extras | 7 dropdowns × 6 options = 42 | 7 yes/no checkboxes; quantity appears only once one is ticked. |
+| Contact form | 6 fields, 4 of them optional | 3 visible. The rest collapse, and auto-open if a validation error lands in them. |
+| Staff booking screen | 8 actions of equal weight | 1 promoted by state (check in / check out / take payment), the rest behind *Other actions*. |
+| Navigation | 8+ links for staff | Role-split: guests see the 4 public pages, staff see their 4 work screens. |
+
+The promoted staff action comes from
+[`Reservation::primaryDeskAction()`](app/Models/Reservation.php) — derived from the state
+machine rather than guessed, so it cannot disagree with what the booking will actually
+allow.
+
+**Where it was deliberately not applied:** the homepage prose and FAQ. Hick's Law governs
+*choices*, not reading — cutting content there would cost SEO and answer nothing a visitor
+is deciding between.
 
 ### Room state vs. availability
 

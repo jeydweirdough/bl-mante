@@ -5,10 +5,13 @@ namespace App\Services;
 use App\Enums\ReservationStatus;
 use App\Enums\RoomStatus;
 use App\Models\DurationPackage;
+use App\Models\PackagePrice;
 use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\RoomType;
+use App\Support\Availability;
 use App\Support\BookingWindow;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -264,6 +267,143 @@ class AvailabilityService
     public function lockRoom(int $roomId): void
     {
         Room::query()->whereKey($roomId)->lockForUpdate()->first();
+    }
+
+    // -----------------------------------------------------------------------
+    // Forward search, for the public rooms page
+    // -----------------------------------------------------------------------
+
+    /**
+     * For each room type: is it free for this window, and if not, when next?
+     *
+     * Telling a visitor "fully booked" and stopping is a dead end. Telling them
+     * the next free start hour gives them something to click.
+     *
+     * Cost: two queries in total, not two per room type per hour. The whole
+     * horizon of reservations is pulled once and the scan happens in memory --
+     * probing the database hour by hour across a fortnight would be thousands
+     * of round trips to answer one page.
+     *
+     * @return Collection<int, Availability>
+     */
+    public function overview(
+        CarbonInterface $startsAt,
+        DurationPackage $package,
+        int $partySize = 1,
+        ?int $lookaheadDays = null,
+    ): Collection {
+        $policy = $this->policies->current();
+        $requested = BookingWindow::forPackage($startsAt, $package, $policy);
+        $horizonEnd = $requested->startsAt->addDays($lookaheadDays ?? config('hotel.rooms_lookahead_days'));
+
+        // Every room that could ever take this party, with its type and price.
+        $rooms = Room::query()
+            ->where('is_bookable', true)
+            ->where('status', '!=', RoomStatus::OutOfService->value)
+            ->whereHas('roomType', fn (Builder $q) => $q
+                ->where('is_active', true)
+                ->where('max_occupancy', '>=', max(1, $partySize)))
+            ->with('roomType')
+            ->orderBy('number')
+            ->get();
+
+        if ($rooms->isEmpty()) {
+            return collect();
+        }
+
+        // Everything already holding any of those rooms, anywhere in the
+        // horizon. One query, then grouped by room.
+        $blocks = Reservation::query()
+            ->whereIn('room_id', $rooms->modelKeys())
+            ->whereIn('status', ReservationStatus::occupyingValues())
+            ->where('starts_at', '<', $horizonEnd)
+            ->where('blocked_until', '>', $requested->startsAt)
+            ->get(['room_id', 'starts_at', 'blocked_until'])
+            ->groupBy('room_id');
+
+        $prices = PackagePrice::query()
+            ->where('duration_package_id', $package->id)
+            ->where('is_active', true)
+            ->pluck('price_cents', 'room_type_id');
+
+        return $rooms
+            ->groupBy('room_type_id')
+            ->map(function (Collection $group) use ($requested, $blocks, $prices, $horizonEnd) {
+                $roomType = $group->first()->roomType;
+
+                $free = $group->filter(
+                    fn (Room $room) => $this->roomIsFreeIn($blocks->get($room->id), $requested)
+                )->values();
+
+                return new Availability(
+                    roomType: $roomType,
+                    requested: $requested,
+                    freeRooms: $free,
+                    priceCents: $prices->get($roomType->id),
+                    nextWindow: $free->isNotEmpty()
+                        ? null
+                        : $this->nextFreeWindow($group, $blocks, $requested, $horizonEnd),
+                    searchedToHorizon: $free->isEmpty(),
+                );
+            })
+            ->sortBy(fn (Availability $row) => $row->roomType->sort_order)
+            ->values();
+    }
+
+    /**
+     * The earliest start hour at or after the requested one where some room in
+     * the group is free for the whole window.
+     *
+     * Walks hour by hour because reservations start on the hour and nothing
+     * else is bookable -- there is no point testing 14:30. Stops at the first
+     * hit, so a type that is free an hour later costs one iteration.
+     *
+     * @param  Collection<int, Room>  $rooms
+     * @param  Collection<int, Collection>  $blocks  reservations grouped by room id
+     */
+    private function nextFreeWindow(
+        Collection $rooms,
+        Collection $blocks,
+        BookingWindow $requested,
+        CarbonImmutable $horizonEnd,
+    ): ?BookingWindow {
+        $candidate = $requested->startsAt->addHour();
+
+        while ($candidate->lt($horizonEnd)) {
+            $window = BookingWindow::make($candidate, $requested->hours, $requested->bufferMinutes);
+
+            foreach ($rooms as $room) {
+                if ($this->roomIsFreeIn($blocks->get($room->id), $window)) {
+                    return $window;
+                }
+            }
+
+            $candidate = $candidate->addHour();
+        }
+
+        return null;
+    }
+
+    /**
+     * The overlap rule again, applied in memory to rows already fetched.
+     *
+     * Identical in meaning to applyOverlap(): half-open, over the stay plus
+     * its trailing buffer. Two expressions of one rule is a risk, so both
+     * carry the same comment and the same test covers them.
+     */
+    private function roomIsFreeIn(?Collection $roomBlocks, BookingWindow $window): bool
+    {
+        if ($roomBlocks === null || $roomBlocks->isEmpty()) {
+            return true;
+        }
+
+        foreach ($roomBlocks as $block) {
+            if ($block->starts_at < $window->blockedUntil && $block->blocked_until > $window->startsAt) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // -----------------------------------------------------------------------

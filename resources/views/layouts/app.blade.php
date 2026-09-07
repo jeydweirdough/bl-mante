@@ -64,11 +64,45 @@
             </main>
 
             <footer class="border-t border-slate-200 bg-white mt-16">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-sm text-slate-500 sm:flex sm:justify-between">
-                    <p>&copy; {{ now()->year }} {{ config('hotel.name') }}. All times shown are property local time.</p>
-                    <p class="mt-2 sm:mt-0">
-                        {{ config('hotel.contact_phone') }} &middot;
-                        <a href="mailto:{{ config('hotel.contact_email') }}" class="hover:text-slate-800">{{ config('hotel.contact_email') }}</a>
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div class="grid gap-8 sm:grid-cols-3">
+                        <div>
+                            <p class="font-semibold text-slate-900">{{ config('hotel.name') }}</p>
+                            <address class="mt-2 not-italic text-sm text-slate-600">
+                                {{ config('hotel.address.street') }}<br>
+                                {{ config('hotel.address.district') }}, {{ config('hotel.address.city') }} {{ config('hotel.address.postal_code') }}<br>
+                                {{ config('hotel.address.country_name') }}
+                            </address>
+                        </div>
+
+                        <div>
+                            <p class="text-sm font-semibold text-slate-900">Pages</p>
+                            <ul class="mt-2 space-y-1.5 text-sm">
+                                <li><a href="{{ route('home') }}" class="text-slate-600 hover:text-slate-900">Home</a></li>
+                                <li><a href="{{ route('rooms.index') }}" class="text-slate-600 hover:text-slate-900">Rooms and rates</a></li>
+                                <li><a href="{{ route('about') }}" class="text-slate-600 hover:text-slate-900">About us</a></li>
+                                <li><a href="{{ route('contact') }}" class="text-slate-600 hover:text-slate-900">Contact us</a></li>
+                                <li><a href="{{ route('availability') }}" class="text-slate-600 hover:text-slate-900">Check availability</a></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <p class="text-sm font-semibold text-slate-900">Reception, 24 hours</p>
+                            <ul class="mt-2 space-y-1.5 text-sm">
+                                <li>
+                                    <a href="tel:{{ preg_replace('/[^0-9+]/', '', config('hotel.contact_phone')) }}"
+                                       class="text-slate-600 hover:text-slate-900">{{ config('hotel.contact_phone') }}</a>
+                                </li>
+                                <li>
+                                    <a href="mailto:{{ config('hotel.contact_email') }}"
+                                       class="text-slate-600 hover:text-slate-900 break-all">{{ config('hotel.contact_email') }}</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <p class="mt-8 border-t border-slate-200 pt-6 text-sm text-slate-500">
+                        &copy; {{ now()->year }} {{ config('hotel.name') }}. All times shown are property local time.
                     </p>
                 </div>
             </footer>

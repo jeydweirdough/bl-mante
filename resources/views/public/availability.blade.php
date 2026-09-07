@@ -10,66 +10,17 @@
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <x-card>
-            <form method="GET" action="{{ route('availability') }}" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-                <div class="lg:col-span-2">
-                    <x-input-label for="date" value="Date" />
-                    <input type="date" id="date" name="date"
-                           value="{{ $defaults['date'] ?? now()->format('Y-m-d') }}"
-                           min="{{ now()->format('Y-m-d') }}"
-                           max="{{ now()->addDays(config('hotel.search_horizon_days'))->format('Y-m-d') }}"
-                           class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500" required>
-                </div>
-
-                <div>
-                    <x-input-label for="hour" value="Start time" />
-                    <select id="hour" name="hour" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                        @foreach (range(0, 23) as $h)
-                            <option value="{{ $h }}" @selected((int) ($defaults['hour'] ?? 12) === $h)>{{ sprintf('%02d:00', $h) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <x-input-label for="duration_package_id" value="Package" />
-                    <select id="duration_package_id" name="duration_package_id" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                        @foreach ($packages as $p)
-                            <option value="{{ $p->id }}" @selected(($defaults['duration_package_id'] ?? null) === $p->id)>{{ $p->hours }} hours</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <x-input-label for="room_type_id" value="Room type" />
-                    <select id="room_type_id" name="room_type_id" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500">
-                        <option value="">Any</option>
-                        @foreach ($roomTypes as $type)
-                            <option value="{{ $type->id }}" @selected(($selectedRoomTypeId ?? null) === $type->id)>{{ $type->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="flex items-end gap-2">
-                    <div class="flex-1">
-                        <x-input-label for="adults" value="Guests" />
-                        <div class="mt-1 flex gap-1">
-                            <select id="adults" name="adults" class="block w-full rounded-md border-slate-300 shadow-sm text-sm" aria-label="Adults">
-                                @foreach (range(1, 6) as $n)
-                                    <option value="{{ $n }}" @selected((int) ($adults ?? 1) === $n)>{{ $n }}</option>
-                                @endforeach
-                            </select>
-                            <select name="children" class="block w-full rounded-md border-slate-300 shadow-sm text-sm" aria-label="Children">
-                                @foreach (range(0, 4) as $n)
-                                    <option value="{{ $n }}" @selected((int) ($children ?? 0) === $n)>+{{ $n }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex items-end lg:col-span-6">
-                    <button type="submit" class="inline-flex justify-center rounded-md bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">Search</button>
-                </div>
-            </form>
+            {{-- Two visible questions -- when, and how long -- with guests and
+                 room type behind a disclosure. Hick's Law: the fewer options
+                 competing for attention, the faster the decision, and most
+                 visitors have no opinion about the ones now hidden. --}}
+            <x-search-form
+                :packages="$packages"
+                :room-types="$roomTypes"
+                :defaults="$defaults"
+                :adults="$adults ?? 1"
+                :children="$children ?? 0"
+                :selected-room-type-id="$selectedRoomTypeId ?? null" />
         </x-card>
 
         @if ($results !== null)

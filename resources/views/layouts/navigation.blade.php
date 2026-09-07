@@ -11,27 +11,41 @@
                     <span class="font-semibold text-slate-900 hidden sm:block">{{ config('hotel.name') }}</span>
                 </a>
 
+                {{-- Each role sees only the links it actually navigates to.
+                     Staff were previously shown the four marketing pages plus
+                     their four work screens; they never go to About from the
+                     desk, and every extra link is another thing to scan past. --}}
                 <div class="hidden space-x-6 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('rooms.index')" :active="request()->routeIs('rooms.*')">Rooms</x-nav-link>
-                    <x-nav-link :href="route('availability')" :active="request()->routeIs('availability')">Check availability</x-nav-link>
+                    @if (auth()->check() && $user->isPersonnel())
+                        <x-nav-link :href="route('staff.dashboard')" :active="request()->routeIs('staff.dashboard')">Front desk</x-nav-link>
+                        <x-nav-link :href="route('staff.reservations.index')" :active="request()->routeIs('staff.reservations.*')">Bookings</x-nav-link>
+                        <x-nav-link :href="route('staff.housekeeping')" :active="request()->routeIs('staff.housekeeping')">Housekeeping</x-nav-link>
+                        <x-nav-link :href="route('staff.enquiries.index')" :active="request()->routeIs('staff.enquiries.*')">
+                            Enquiries
+                            @if ($unreadEnquiries ?? 0)
+                                <span class="ml-1 inline-flex items-center rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-800">{{ $unreadEnquiries }}</span>
+                            @endif
+                        </x-nav-link>
+                    @else
+                        <x-nav-link :href="route('rooms.index')" :active="request()->routeIs('rooms.*')">Rooms</x-nav-link>
+                        <x-nav-link :href="route('about')" :active="request()->routeIs('about')">About</x-nav-link>
+                        <x-nav-link :href="route('contact')" :active="request()->routeIs('contact')">Contact</x-nav-link>
 
-                    @auth
-                        @if ($user->isPersonnel())
-                            <x-nav-link :href="route('staff.dashboard')" :active="request()->routeIs('staff.dashboard')">Front desk</x-nav-link>
-                            <x-nav-link :href="route('staff.reservations.index')" :active="request()->routeIs('staff.reservations.*')">Bookings</x-nav-link>
-                            <x-nav-link :href="route('staff.housekeeping')" :active="request()->routeIs('staff.housekeeping')">Housekeeping</x-nav-link>
-                        @else
+                        @auth
                             <x-nav-link :href="route('reservations.index')" :active="request()->routeIs('reservations.*')">My bookings</x-nav-link>
-                        @endif
-
-                        @can('access-admin-area')
-                            <x-nav-link :href="route('admin.reports.index')" :active="request()->routeIs('admin.*')">Admin</x-nav-link>
-                        @endcan
-                    @endauth
+                        @endauth
+                    @endif
                 </div>
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6 gap-3">
+                @unless (auth()->check() && $user->isPersonnel())
+                    <a href="{{ route('availability') }}"
+                       class="hidden lg:inline-flex items-center rounded-md bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white hover:bg-slate-700">
+                        Book a room
+                    </a>
+                @endunless
+
                 @guest
                     <a href="{{ route('login') }}" class="text-sm font-medium text-slate-600 hover:text-slate-900">Sign in</a>
                     <a href="{{ route('register') }}" class="inline-flex items-center rounded-md bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white hover:bg-slate-700">Create account</a>
@@ -64,14 +78,24 @@
                             @endif
 
                             @can('access-admin-area')
-                                <div class="border-t border-slate-100 my-1"></div>
-                                <x-dropdown-link :href="route('admin.room-types.index')">Room types</x-dropdown-link>
-                                <x-dropdown-link :href="route('admin.rooms.index')">Rooms</x-dropdown-link>
-                                <x-dropdown-link :href="route('admin.pricing.index')">Pricing</x-dropdown-link>
-                                <x-dropdown-link :href="route('admin.extras.index')">Extras</x-dropdown-link>
-                                <x-dropdown-link :href="route('admin.policy.edit')">Booking policy</x-dropdown-link>
-                                <x-dropdown-link :href="route('admin.staff.index')">Staff accounts</x-dropdown-link>
-                                <x-dropdown-link :href="route('admin.reports.index')">Reports</x-dropdown-link>
+                                {{-- Grouped rather than a flat list of seven.
+                                     The count is the same; the scan is not,
+                                     because a heading lets a whole group be
+                                     skipped at a glance. --}}
+                                <div class="border-t border-slate-100 mt-1 pt-2">
+                                    <p class="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">What we sell</p>
+                                    <x-dropdown-link :href="route('admin.room-types.index')">Room types</x-dropdown-link>
+                                    <x-dropdown-link :href="route('admin.rooms.index')">Rooms</x-dropdown-link>
+                                    <x-dropdown-link :href="route('admin.pricing.index')">Pricing</x-dropdown-link>
+                                    <x-dropdown-link :href="route('admin.extras.index')">Extras</x-dropdown-link>
+                                </div>
+
+                                <div class="border-t border-slate-100 mt-1 pt-2">
+                                    <p class="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Running the place</p>
+                                    <x-dropdown-link :href="route('admin.policy.edit')">Booking policy</x-dropdown-link>
+                                    <x-dropdown-link :href="route('admin.staff.index')">Staff accounts</x-dropdown-link>
+                                    <x-dropdown-link :href="route('admin.reports.index')">Reports</x-dropdown-link>
+                                </div>
                             @endcan
 
                             <div class="border-t border-slate-100 my-1"></div>
@@ -102,22 +126,29 @@
 
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden border-t border-slate-200">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('rooms.index')" :active="request()->routeIs('rooms.*')">Rooms</x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('availability')" :active="request()->routeIs('availability')">Check availability</x-responsive-nav-link>
+            {{-- The same role split as the desktop bar: only the links this
+                 person actually navigates to. --}}
+            @if (auth()->check() && $user->isPersonnel())
+                <x-responsive-nav-link :href="route('staff.dashboard')">Front desk</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('staff.reservations.index')">Bookings</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('staff.housekeeping')">Housekeeping</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('staff.enquiries.index')">
+                    Enquiries @if ($unreadEnquiries ?? 0) ({{ $unreadEnquiries }}) @endif
+                </x-responsive-nav-link>
+            @else
+                <x-responsive-nav-link :href="route('rooms.index')" :active="request()->routeIs('rooms.*')">Rooms</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('about')" :active="request()->routeIs('about')">About</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('contact')" :active="request()->routeIs('contact')">Contact</x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('availability')" :active="request()->routeIs('availability')">Book a room</x-responsive-nav-link>
 
-            @auth
-                @if ($user->isPersonnel())
-                    <x-responsive-nav-link :href="route('staff.dashboard')">Front desk</x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('staff.reservations.index')">Bookings</x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('staff.housekeeping')">Housekeeping</x-responsive-nav-link>
-                @else
+                @auth
                     <x-responsive-nav-link :href="route('reservations.index')">My bookings</x-responsive-nav-link>
-                @endif
+                @endauth
+            @endif
 
-                @can('access-admin-area')
-                    <x-responsive-nav-link :href="route('admin.reports.index')">Admin</x-responsive-nav-link>
-                @endcan
-            @endauth
+            @can('access-admin-area')
+                <x-responsive-nav-link :href="route('admin.reports.index')">Admin</x-responsive-nav-link>
+            @endcan
         </div>
 
         <div class="pt-4 pb-3 border-t border-slate-200">

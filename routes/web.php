@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\AboutController;
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MockGatewayController;
 use App\Http\Controllers\PaymentController;
@@ -25,9 +27,19 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', HomeController::class)->name('home');
+Route::get('/about', AboutController::class)->name('about');
 Route::get('/rooms', [RoomTypeController::class, 'index'])->name('rooms.index');
 Route::get('/rooms/{roomType}', [RoomTypeController::class, 'show'])->name('rooms.show');
 Route::get('/availability', [AvailabilityController::class, 'index'])->name('availability');
+
+Route::get('/contact', [ContactController::class, 'show'])->name('contact');
+
+// Rate limited because it is the one unauthenticated write in the application.
+// Five an hour is well above what a real guest needs and well below what makes
+// the inbox unusable.
+Route::post('/contact', [ContactController::class, 'store'])
+    ->middleware('throttle:5,60')
+    ->name('contact.store');
 
 // Generated rather than static files, so a new room type is published to
 // search engines without anyone remembering to edit anything.
@@ -128,6 +140,10 @@ Route::middleware(['auth', 'active', 'personnel'])->prefix('staff')->name('staff
     Route::post('/reservations/{reservation}/extensions', [Staff\ExtensionController::class, 'store'])->name('extensions.store');
     Route::post('/extensions/{extension}/approve', [Staff\ExtensionController::class, 'approve'])->name('extensions.approve');
     Route::post('/extensions/{extension}/refuse', [Staff\ExtensionController::class, 'refuse'])->name('extensions.refuse');
+
+    Route::get('/enquiries', [Staff\EnquiryController::class, 'index'])->name('enquiries.index');
+    Route::get('/enquiries/{enquiry}', [Staff\EnquiryController::class, 'show'])->name('enquiries.show');
+    Route::put('/enquiries/{enquiry}', [Staff\EnquiryController::class, 'update'])->name('enquiries.update');
 
     Route::get('/housekeeping', [Staff\HousekeepingController::class, 'index'])->name('housekeeping');
     Route::post('/rooms/{room}/cleaning-complete', [Staff\HousekeepingController::class, 'markCleaningComplete'])->name('rooms.cleaning-complete');

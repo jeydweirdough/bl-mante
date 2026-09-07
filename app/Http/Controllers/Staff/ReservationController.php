@@ -67,7 +67,7 @@ class ReservationController extends Controller
         ]);
     }
 
-    public function show(Reservation $reservation): View
+    public function show(Request $request, Reservation $reservation): View
     {
         $this->authorize('view', $reservation);
 
@@ -88,6 +88,24 @@ class ReservationController extends Controller
             )->reject(fn (Room $r) => $r->id === $reservation->room_id)->values()
             : collect();
 
+        // The one action the desk most likely wants, and the rest. Worked out
+        // here rather than in the template: it is view-model logic, it needs
+        // the policy gates, and a Blade @php block is the wrong place for
+        // anything with a branch in it.
+        $primaryAction = $reservation->primaryDeskAction();
+
+        $otherActions = collect([
+            'check-in' => $request->user()->can('checkIn', $reservation),
+            'check-out' => $request->user()->can('checkOut', $reservation),
+            'no-show' => $request->user()->can('markNoShow', $reservation),
+            'extend' => $request->user()->can('requestExtension', $reservation),
+        ])
+            ->filter()
+            ->keys()
+            // Whatever was promoted must not also appear in the overflow.
+            ->reject(fn (string $action) => $action === ($primaryAction['action'] ?? null))
+            ->values();
+
         return view('staff.reservations.show', [
             'reservation' => $reservation,
             'alternatives' => $alternatives,
@@ -95,6 +113,8 @@ class ReservationController extends Controller
             'refundOutcome' => $reservation->isCancellable()
                 ? $this->refunds->forCancellation($reservation)
                 : null,
+            'primaryAction' => $primaryAction,
+            'otherActions' => $otherActions,
         ]);
     }
 

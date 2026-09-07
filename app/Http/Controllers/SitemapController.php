@@ -22,7 +22,9 @@ class SitemapController extends Controller
     {
         $urls = collect([
             ['loc' => url('/'), 'priority' => '1.0', 'changefreq' => 'weekly'],
-            ['loc' => route('rooms.index'), 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['loc' => route('rooms.index'), 'priority' => '0.9', 'changefreq' => 'daily'],
+            ['loc' => route('about'), 'priority' => '0.7', 'changefreq' => 'monthly'],
+            ['loc' => route('contact'), 'priority' => '0.7', 'changefreq' => 'monthly'],
             ['loc' => route('availability'), 'priority' => '0.8', 'changefreq' => 'daily'],
         ]);
 

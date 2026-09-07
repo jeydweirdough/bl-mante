@@ -117,6 +117,17 @@ return [
     'minimum_lead_minutes' => (int) env('HOTEL_MINIMUM_LEAD_MINUTES', 0),
 
     /*
+     * How far the rooms page looks forward for the next free slot when the
+     * requested window is full.
+     *
+     * Telling a visitor "fully booked" and stopping is a dead end; telling them
+     * the next free hour gives them something to click. The scan is done in
+     * memory over one query, so the cost of a longer horizon is small -- but a
+     * fortnight is already past the point where anyone waits.
+     */
+    'rooms_lookahead_days' => (int) env('HOTEL_ROOMS_LOOKAHEAD_DAYS', 14),
+
+    /*
     |--------------------------------------------------------------------------
     | Payments
     |--------------------------------------------------------------------------

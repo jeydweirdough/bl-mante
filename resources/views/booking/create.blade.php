@@ -103,24 +103,44 @@
                 </x-card>
 
                 @if ($extras->isNotEmpty())
-                    <x-card title="Extras" subtitle="You can also add these after you book.">
+                    {{-- Extras were seven six-way dropdowns: forty-two options
+                         for something almost nobody wants more than one of.
+                         Now each is a single yes/no, and the quantity only
+                         appears once the answer is yes. --}}
+                    <x-card title="Extras" subtitle="Optional. You can also add these after you book.">
                         <ul class="divide-y divide-slate-100">
                             @foreach ($extras as $extra)
-                                <li class="py-3 flex items-center justify-between gap-4">
-                                    <div>
-                                        <p class="font-medium text-slate-900">{{ $extra->name }}</p>
-                                        <p class="text-xs text-slate-500">
-                                            <x-money :cents="$extra->price_cents" /> {{ strtolower($extra->pricing_basis->label()) }}
-                                            @if ($extra->description) &middot; {{ $extra->description }} @endif
-                                        </p>
-                                    </div>
-                                    <select name="extras[{{ $extra->id }}]"
-                                            x-model.number="quantities[{{ $extra->id }}]"
-                                            class="w-20 rounded-md border-slate-300 shadow-sm text-sm">
-                                        @foreach (range(0, 5) as $n)
-                                            <option value="{{ $n }}">{{ $n }}</option>
-                                        @endforeach
-                                    </select>
+                                <li class="py-3">
+                                    <label class="flex items-start gap-3 cursor-pointer">
+                                        <input type="checkbox"
+                                               @change="quantities[{{ $extra->id }}] = $event.target.checked ? 1 : 0"
+                                               :checked="quantities[{{ $extra->id }}] > 0"
+                                               class="mt-1 rounded border-slate-300 text-slate-900 focus:ring-slate-500">
+                                        <span class="flex-1">
+                                            <span class="block font-medium text-slate-900">{{ $extra->name }}</span>
+                                            <span class="block text-xs text-slate-500">
+                                                <x-money :cents="$extra->price_cents" /> {{ strtolower($extra->pricing_basis->label()) }}
+                                                @if ($extra->description) &middot; {{ $extra->description }} @endif
+                                            </span>
+                                        </span>
+
+                                        <span class="shrink-0" x-show="quantities[{{ $extra->id }}] > 0" x-cloak>
+                                            <select x-model.number="quantities[{{ $extra->id }}]"
+                                                    @click.stop
+                                                    class="w-20 rounded-md border-slate-300 shadow-sm text-sm"
+                                                    aria-label="Quantity of {{ $extra->name }}">
+                                                @foreach (range(1, 5) as $n)
+                                                    <option value="{{ $n }}">{{ $n }}</option>
+                                                @endforeach
+                                            </select>
+                                        </span>
+                                    </label>
+
+                                    {{-- The value actually posted, kept in sync by
+                                         Alpine so the markup above stays about the
+                                         choice rather than the plumbing. --}}
+                                    <input type="hidden" name="extras[{{ $extra->id }}]"
+                                           :value="quantities[{{ $extra->id }}]">
                                 </li>
                             @endforeach
                         </ul>

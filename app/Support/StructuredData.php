@@ -113,6 +113,48 @@ class StructuredData
         ];
     }
 
+    /**
+     * The contact page, pointing back at the property entity rather than
+     * describing a second business with the same address.
+     */
+    public static function contactPage(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'ContactPage',
+            'name' => 'Contact '.config('hotel.name'),
+            'url' => route('contact'),
+            'mainEntity' => [
+                '@id' => url('/#hotel'),
+                '@type' => 'Hotel',
+                'name' => config('hotel.name'),
+                'telephone' => config('hotel.contact_phone'),
+                'email' => config('hotel.contact_email'),
+                'address' => [
+                    '@type' => 'PostalAddress',
+                    'streetAddress' => config('hotel.address.street'),
+                    'addressLocality' => config('hotel.address.district'),
+                    'addressRegion' => config('hotel.address.region'),
+                    'postalCode' => config('hotel.address.postal_code'),
+                    'addressCountry' => config('hotel.address.country'),
+                ],
+                'contactPoint' => [
+                    '@type' => 'ContactPoint',
+                    'contactType' => 'reservations',
+                    'telephone' => config('hotel.contact_phone'),
+                    'email' => config('hotel.contact_email'),
+                    'availableLanguage' => ['en'],
+                    'hoursAvailable' => [
+                        '@type' => 'OpeningHoursSpecification',
+                        'dayOfWeek' => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                        'opens' => '00:00',
+                        'closes' => '23:59',
+                    ],
+                ],
+            ],
+        ];
+    }
+
     /** Enables the sitelinks search box, and names the site as an entity. */
     public static function website(): array
     {

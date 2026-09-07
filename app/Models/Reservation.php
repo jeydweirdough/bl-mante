@@ -359,6 +359,37 @@ class Reservation extends Model
         return $this->status->label();
     }
 
+    /**
+     * The one thing the desk most likely wants to do with this booking now.
+     *
+     * Hick's Law, applied to the staff screen: it previously offered eight
+     * actions of equal weight, so every visit cost a scan of all eight. A
+     * booking's state almost always implies a single next step -- a confirmed
+     * arrival gets checked in, a guest in house gets checked out -- so that
+     * one is promoted and the rest move behind a disclosure.
+     *
+     * Nothing is removed. The others are one click away, and the ordering is
+     * derived from the state machine rather than guessed.
+     *
+     * @return array{action:string, label:string, tone:string}|null
+     */
+    public function primaryDeskAction(): ?array
+    {
+        return match (true) {
+            $this->status === ReservationStatus::Confirmed && $this->hasStarted() => ['action' => 'check-in', 'label' => 'Check in '.$this->guestName(), 'tone' => 'primary'],
+
+            $this->status === ReservationStatus::Confirmed => ['action' => 'check-in', 'label' => 'Check in', 'tone' => 'primary'],
+
+            $this->status === ReservationStatus::CheckedIn && $this->balance_due_cents > 0 => ['action' => 'collect', 'label' => 'Take payment', 'tone' => 'warning'],
+
+            $this->status === ReservationStatus::CheckedIn => ['action' => 'check-out', 'label' => 'Check out', 'tone' => 'primary'],
+
+            $this->status === ReservationStatus::Pending && $this->balance_due_cents > 0 => ['action' => 'collect', 'label' => 'Take payment', 'tone' => 'warning'],
+
+            default => null,
+        };
+    }
+
     /** A one-line description used in the duplicate-booking message. */
     public function shortDescription(): string
     {

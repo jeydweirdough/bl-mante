@@ -64,12 +64,46 @@
                     </p>
                 </x-card>
 
-                <x-card title="Check availability">
-                    <x-search-form
-                        :packages="$packages"
-                        :room-types="collect([$roomType])"
-                        :selected-room-type-id="$roomType->id"
-                        :defaults="['date' => now()->format('Y-m-d'), 'hour' => now()->addHour()->hour, 'duration_package_id' => $packages->first()?->id]" />
+                <x-card title="Availability">
+                    {{-- Answered against a real window rather than offering a
+                         blank form: a visitor on a room page wants to know if
+                         they can have it, not to fill something in first. --}}
+                    <form method="GET" class="grid gap-3 sm:grid-cols-3 mb-4">
+                        <div class="sm:col-span-2">
+                            <x-input-label for="date" value="Date" />
+                            <input type="date" id="date" name="date" value="{{ $startsAt->format('Y-m-d') }}"
+                                   min="{{ now()->format('Y-m-d') }}"
+                                   max="{{ now()->addDays(config('hotel.search_horizon_days'))->format('Y-m-d') }}"
+                                   class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">
+                        </div>
+                        <div>
+                            <x-input-label for="hour" value="From" />
+                            <select id="hour" name="hour" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">
+                                @foreach (range(0, 23) as $h)
+                                    <option value="{{ $h }}" @selected($startsAt->hour === $h)>{{ sprintf('%02d:00', $h) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <x-input-label for="duration_package_id" value="How long" />
+                            <select id="duration_package_id" name="duration_package_id" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm text-sm">
+                                @foreach ($packages as $p)
+                                    <option value="{{ $p->id }}" @selected($package?->id === $p->id)>{{ $p->hours }} hours</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50">Check</button>
+                        </div>
+                    </form>
+
+                    <x-availability-panel
+                        :row="$row"
+                        :package="$package"
+                        :room-type="$roomType"
+                        :starts-at="$startsAt"
+                        :adults="$roomType->base_occupancy"
+                        :children="0" />
                 </x-card>
             </div>
         </div>
